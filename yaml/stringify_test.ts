@@ -1007,6 +1007,13 @@ Deno.test("unstableStringify() applies the skipInvalid doctrine to Map entries",
     unstableStringify(new Map([["fn", () => {}]]), { skipInvalid: true }),
     "{}\n",
   );
+  assertEquals(
+    unstableStringify(
+      new Map<unknown, unknown>([[() => {}, 1], ["ok", 2]]),
+      { skipInvalid: true },
+    ),
+    "ok: 2\n",
+  );
   // Invalid keys and values are skipped per pair in flow style too
   assertEquals(
     unstableStringify(
