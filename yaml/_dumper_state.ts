@@ -392,14 +392,15 @@ function getDuplicateObjects(
       continue;
     }
     seenObjects.add(value);
-    const children = Array.isArray(value)
-      ? value
-      : walkMapsAndSets && value instanceof Map
-      ? [...value.keys(), ...value.values()]
-      : walkMapsAndSets && value instanceof Set
-      ? [...value]
-      : Object.values(value);
-    queue.push(...children);
+    if (Array.isArray(value)) {
+      queue.push(...value);
+    } else if (walkMapsAndSets && value instanceof Map) {
+      queue.push(...value.keys(), ...value.values());
+    } else if (walkMapsAndSets && value instanceof Set) {
+      queue.push(...value);
+    } else {
+      queue.push(...Object.values(value));
+    }
   }
 
   return [...duplicateObjects];
@@ -463,10 +464,9 @@ export interface DumperStateOptions {
    */
   quoteStyle?: "'" | '"';
   /**
-   * If true, `Map`s are stringified as YAML mappings in insertion order and
-   * `Set`s as `!!set` mappings. Internal-only: intentionally absent from the
-   * public `StringifyOptions` types; the unstable module sets it
-   * unconditionally. (default: false)
+   * If true, `Map`s stringify as YAML mappings in insertion order and `Set`s
+   * as `!!set`. Internal-only: absent from the public `StringifyOptions`
+   * types; the unstable module sets it unconditionally. (default: false)
    */
   serializeMapsAndSets?: boolean;
 }
@@ -914,7 +914,8 @@ export class DumperState {
       ) {
         let map: Map<unknown, unknown>;
         if (value instanceof Set) {
-          // A set is a mapping from its members to null, tagged `!!set`.
+          // `!!set` only resolves when every value is null, so members must
+          // become null-valued keys for the output to round-trip.
           tag = "tag:yaml.org,2002:set";
           map = new Map([...value].map((member) => [member, null]));
           compact = false;
