@@ -990,6 +990,11 @@ Deno.test("unstableStringify() anchors duplicate Maps and objects inside Maps", 
     ),
     "? &ref_0\n  v: 1\n: first\nother: *ref_0\n",
   );
+  // Anchors work in flow style too
+  assertEquals(
+    unstableStringify({ x: shared, y: shared }, { flowLevel: 0 }),
+    "{x: &ref_0 {k: 1}, 'y': *ref_0}\n",
+  );
 });
 
 Deno.test("unstableStringify() applies the skipInvalid doctrine to Map entries", () => {

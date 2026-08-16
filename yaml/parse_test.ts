@@ -1255,6 +1255,11 @@ Deno.test("unstableParse() with useMaps parses mappings into Maps with typed key
     unstableParse("{3: A3, b: 2}", { useMaps: true }),
     new Map<unknown, unknown>([[3, "A3"], ["b", 2]]),
   );
+  // An explicit pair inside a flow sequence becomes a single-pair Map
+  assertEquals(
+    unstableParse("[? a : 1, plain]", { useMaps: true }),
+    [new Map([["a", 1]]), "plain"],
+  );
   // Entries preserve document order
   assertEquals(
     [...(unstableParse("b: 1\na: 2\nc: 3", { useMaps: true }) as Map<
@@ -1389,6 +1394,12 @@ Deno.test("unstableParse() with useMaps constructs Set, Map and pairs from !!set
   );
   assertThrows(
     () => unstableParse("!!omap\n- 3: a\n- 3: b", { useMaps: true }),
+    YamlSyntaxError,
+    "Cannot resolve a node",
+  );
+  // Each omap entry must be a single-pair mapping
+  assertThrows(
+    () => unstableParse("!!omap\n- a: 1\n  b: 2", { useMaps: true }),
     YamlSyntaxError,
     "Cannot resolve a node",
   );
