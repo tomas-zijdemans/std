@@ -1007,6 +1007,26 @@ Deno.test("unstableStringify() applies the skipInvalid doctrine to Map entries",
     unstableStringify(new Map([["fn", () => {}]]), { skipInvalid: true }),
     "{}\n",
   );
+  // Invalid keys and values are skipped per pair in flow style too
+  assertEquals(
+    unstableStringify(
+      new Map<unknown, unknown>([[() => {}, 1], ["k", () => {}], [1, "ok"]]),
+      { skipInvalid: true, flowLevel: 0 },
+    ),
+    "{1: ok}\n",
+  );
+});
+
+Deno.test("unstableStringify() puts Map keys over 1024 characters in explicit key form", () => {
+  const longKey = "x".repeat(1025);
+  assertEquals(
+    unstableStringify(new Map([[longKey, 1]])),
+    `? ${longKey}\n: 1\n`,
+  );
+  assertEquals(
+    unstableStringify(new Map([[longKey, 1]]), { flowLevel: 0 }),
+    `{? ${longKey}: 1}\n`,
+  );
 });
 
 Deno.test("unstableStringify() round-trips Maps and Sets with unstableParse()", () => {
