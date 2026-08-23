@@ -96,7 +96,13 @@ Deno.test("isRetriableFetchError() returns true for a real failed fetch TypeErro
     (error) => error,
   );
   assertInstanceOf(error, TypeError);
-  assert(isRetriableFetchError(error));
+  const { code } = error as { code?: unknown };
+  assert(
+    isRetriableFetchError(error),
+    `unexpected failed-fetch shape: name=${error.name} message=${
+      JSON.stringify(error.message)
+    } code=${JSON.stringify(code)}`,
+  );
 });
 
 Deno.test("isRetriableFetchError() returns true for legacy Deno transport TypeErrors", () => {
@@ -104,6 +110,62 @@ Deno.test("isRetriableFetchError() returns true for legacy Deno transport TypeEr
     isRetriableFetchError(
       new TypeError(
         "error sending request for url (http://example.com/): client error (Connect): tcp connect error",
+      ),
+    ),
+  );
+});
+
+Deno.test("isRetriableFetchError() returns true for errors with a transient network code", () => {
+  // Shapes thrown by Bun's fetch, verified against Bun 1.4.
+  const bunShapes = [
+    Object.assign(
+      new TypeError(
+        "Unable to connect. Is the computer able to access the url?",
+      ),
+      { code: "ConnectionRefused" },
+    ),
+    Object.assign(
+      new TypeError(
+        "The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()",
+      ),
+      { code: "ECONNRESET" },
+    ),
+    Object.assign(
+      new TypeError("getaddrinfo ENOTFOUND example.invalid"),
+      { code: "ENOTFOUND" },
+    ),
+  ];
+  for (const error of bunShapes) {
+    assert(isRetriableFetchError(error), String(error.code));
+  }
+  // The cause of undici's "fetch failed" TypeError, as rethrown directly.
+  const undiciCause = Object.assign(
+    new Error("connect ECONNREFUSED 127.0.0.1:80"),
+    { code: "ECONNREFUSED", errno: -61, syscall: "connect" },
+  );
+  assert(isRetriableFetchError(undiciCause));
+});
+
+Deno.test("isRetriableFetchError() ignores deterministic, unknown, and non-string codes", () => {
+  assertFalse(
+    isRetriableFetchError(
+      Object.assign(new TypeError("Failed to parse URL from :bad:"), {
+        code: "ERR_INVALID_URL",
+      }),
+    ),
+  );
+  assertFalse(
+    isRetriableFetchError(
+      Object.assign(new Error("connection refused"), { code: 111 }),
+    ),
+  );
+});
+
+Deno.test("isRetriableFetchError() ignores the Bun connection-refused message without the code", () => {
+  assertFalse(
+    isRetriableFetchError(
+      new TypeError(
+        "Unable to connect. Is the computer able to access the url?",
       ),
     ),
   );

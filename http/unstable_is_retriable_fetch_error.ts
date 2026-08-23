@@ -6,7 +6,7 @@ const MAX_DEPTH = 8;
 
 /**
  * Exact failed-fetch `TypeError` messages: "fetch failed" is shared by
- * undici (Node.js), Deno 2.9+, and Bun; the rest are browser strings.
+ * undici (Node.js) and Deno 2.9+; the rest are browser strings.
  * Matching is case-sensitive on purpose: Deno's "Fetch failed: <reason>"
  * (capital F, policy failures such as blocked ports) is a near-collision
  * that must stay excluded because those failures are deterministic on
@@ -24,6 +24,25 @@ const FAILED_FETCH_MESSAGES = [
  * "error sending request for url (...): ...".
  */
 const LEGACY_DENO_MESSAGE_PREFIX = "error sending request";
+
+/**
+ * `code` values of transient network failures. Bun's fetch reports
+ * transport failures through `code` rather than a fixed message (the DNS
+ * failure message even embeds the hostname): "ConnectionRefused" and
+ * "Timeout" are Bun's labels, the errno-style names are shared with
+ * Node.js, which also exposes them on the `cause` of undici's
+ * "fetch failed" TypeError. Deterministic codes such as "ERR_INVALID_URL"
+ * are excluded on purpose.
+ */
+const TRANSIENT_NETWORK_CODES = new Set([
+  "ConnectionRefused",
+  "Timeout",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+]);
 
 function isRetriableStatus(status: number): boolean {
   return status === 408 || status === 429 ||
@@ -45,7 +64,10 @@ function isRetriableValue(value: object): boolean {
     return true;
   }
   if (value instanceof Error) {
-    const { status } = value as { status?: unknown };
+    const { status, code } = value as { status?: unknown; code?: unknown };
+    if (typeof code === "string" && TRANSIENT_NETWORK_CODES.has(code)) {
+      return true;
+    }
     if (
       typeof status === "number" && Number.isInteger(status) &&
       status >= 100 && status <= 599
@@ -69,10 +91,15 @@ function isRetriableValue(value: object): boolean {
  *   nonstandard 5xx codes such as Cloudflare's 522,
  * - an {@linkcode Error} with an integer `status` property in the range
  *   100-599, using the same status test,
+ * - an {@linkcode Error} whose `code` names a transient network failure:
+ *   "ConnectionRefused" or "Timeout" (Bun), or the errno-style
+ *   "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", or
+ *   "EAI_AGAIN" (Bun and Node.js, including the `cause` of undici's
+ *   "fetch failed" TypeError),
  * - a `DOMException` named `TimeoutError`, as thrown by
  *   `AbortSignal.timeout()`,
  * - a {@linkcode TypeError} whose message exactly matches a known
- *   failed-fetch message ("fetch failed" on Node.js, Deno 2.9+, and Bun;
+ *   failed-fetch message ("fetch failed" on Node.js and Deno 2.9+;
  *   "Failed to fetch", "NetworkError when attempting to fetch resource.",
  *   and "Load failed" in browsers) or starts with "error sending request"
  *   (Deno before 2.9).
