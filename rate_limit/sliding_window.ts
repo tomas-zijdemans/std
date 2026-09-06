@@ -108,11 +108,6 @@ export function createSlidingWindow(
       `Cannot create sliding window: 'segmentsPerWindow' must be an integer >= 2, received ${options.segmentsPerWindow}`,
     );
   }
-  if (options.window % options.segmentsPerWindow !== 0) {
-    throw new RangeError(
-      `Cannot create sliding window: 'window' (${options.window}) must be evenly divisible by 'segmentsPerWindow' (${options.segmentsPerWindow})`,
-    );
-  }
   assertNonNegativeInteger(context, "queueLimit", options.queueLimit);
 
   const { limit, segmentsPerWindow, window } = options;

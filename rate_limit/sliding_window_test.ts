@@ -66,10 +66,6 @@ Deno.test("createSlidingWindow() throws for invalid options", () => {
       "Cannot create sliding window: 'segmentsPerWindow' must be an integer >= 2, received 1.5",
     ],
     [
-      { limit: 10, window: 1000, segmentsPerWindow: 3 },
-      "Cannot create sliding window: 'window' (1000) must be evenly divisible by 'segmentsPerWindow' (3)",
-    ],
-    [
       { limit: 10, window: 1000, segmentsPerWindow: 2, queueLimit: -1 },
       "Cannot create sliding window: 'queueLimit' must be a non-negative integer, received -1",
     ],
@@ -83,6 +79,23 @@ Deno.test("createSlidingWindow() throws for invalid options", () => {
   for (const [options, message] of cases) {
     assertThrows(() => createSlidingWindow(options), RangeError, message);
   }
+});
+
+Deno.test("createSlidingWindow() accepts a window not divisible by segmentsPerWindow", () => {
+  let now = 0;
+  using limiter = createSlidingWindow({
+    limit: 3,
+    window: 1000,
+    segmentsPerWindow: 3,
+    autoReplenishment: false,
+    clock: () => now,
+  });
+  assert(limiter.tryAcquire(3).acquired);
+  const lease = limiter.tryAcquire();
+  assertFalse(lease.acquired);
+  assertEquals(lease.retryAfter, 1000);
+  now = 1000;
+  assert(limiter.tryAcquire().acquired);
 });
 
 Deno.test("createSlidingWindow() accepts a segment duration above the timer maximum when autoReplenishment is false", () => {

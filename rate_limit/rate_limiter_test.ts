@@ -66,10 +66,6 @@ Deno.test("createRateLimiter() throws for invalid segmentsPerWindow", () => {
       2.5,
       "Cannot create sliding window: 'segmentsPerWindow' must be an integer >= 2, received 2.5",
     ],
-    [
-      3,
-      "Cannot create sliding window: 'window' (1000) must be evenly divisible by 'segmentsPerWindow' (3)",
-    ],
   ];
   for (const [segmentsPerWindow, message] of cases) {
     assertThrows(
@@ -84,6 +80,24 @@ Deno.test("createRateLimiter() throws for invalid segmentsPerWindow", () => {
       message,
     );
   }
+});
+
+// Regression: the default segmentsPerWindow (10) rejected windows it did not
+// divide evenly, naming an option the caller never set.
+Deno.test("createRateLimiter() accepts a window not divisible by segmentsPerWindow", async () => {
+  let now = 0;
+  await using limiter = createRateLimiter({
+    limit: 10,
+    window: 1234,
+    evictionTtl: 0,
+    clock: () => now,
+  });
+  assert((await limiter.limit("a", { cost: 10 })).ok);
+  const denied = await limiter.limit("a");
+  assertFalse(denied.ok);
+  assertEquals(denied.retryAfter, 1234);
+  now = 1234;
+  assert((await limiter.limit("a")).ok);
 });
 
 Deno.test("createRateLimiter() throws for invalid tokensPerPeriod", () => {

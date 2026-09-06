@@ -133,11 +133,6 @@ export function createSlidingWindowOps(
       `Cannot create ${context}: 'segmentsPerWindow' must be an integer >= 2, received ${segmentsPerWindow}`,
     );
   }
-  if (window % segmentsPerWindow !== 0) {
-    throw new RangeError(
-      `Cannot create ${context}: 'window' (${window}) must be evenly divisible by 'segmentsPerWindow' (${segmentsPerWindow})`,
-    );
-  }
   const segmentDuration = window / segmentsPerWindow;
 
   return {
