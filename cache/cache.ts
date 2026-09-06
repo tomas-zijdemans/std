@@ -261,11 +261,13 @@ export interface CacheSetOptions {
  * @experimental **UNSTABLE**: New API, yet to be vetted.
  */
 export interface CacheStats {
-  /** Number of {@linkcode Cache.prototype.get | get()} calls that found a
-   * live entry. */
+  /** Number of reads ({@linkcode Cache.prototype.get | get()} or
+   * {@linkcode Cache.prototype.getOrLoad | getOrLoad()}) that found a live
+   * entry. */
   hits: number;
-  /** Number of {@linkcode Cache.prototype.get | get()} calls that did not
-   * find a live entry. */
+  /** Number of reads ({@linkcode Cache.prototype.get | get()} or
+   * {@linkcode Cache.prototype.getOrLoad | getOrLoad()}) that did not find
+   * a live entry. */
   misses: number;
   /** Number of {@linkcode Cache.prototype.set | set()} calls. */
   sets: number;
@@ -276,8 +278,9 @@ export interface CacheStats {
   evictions: number;
   /** Number of entries removed by TTL expiration. */
   expirations: number;
-  /** Number of {@linkcode Cache.prototype.get | get()} calls that
-   * returned a stale value and triggered a background refresh. */
+  /** Number of reads ({@linkcode Cache.prototype.get | get()} or
+   * {@linkcode Cache.prototype.getOrLoad | getOrLoad()}) that returned a
+   * stale value and triggered a background refresh. */
   staleHits: number;
   /** Number of background refreshes started. */
   refreshes: number;
