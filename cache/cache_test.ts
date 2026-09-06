@@ -865,6 +865,23 @@ Deno.test("Cache getOrLoad() treats a non-promise loader result as a resolved va
   assertEquals(cache.get("a"), 42);
 });
 
+Deno.test("Cache getOrLoad() resolves even when onRemove throws during eviction", async () => {
+  const cache = new Cache<string, number>({
+    maxSize: 1,
+    onRemove: () => {
+      throw new Error("dispose failed");
+    },
+  });
+  cache.set("x", 1);
+  const results = await Promise.all([
+    cache.getOrLoad("y", () => Promise.resolve(7)),
+    cache.getOrLoad("y", () => Promise.resolve(7)),
+  ]);
+  assertEquals(results, [7, 7]);
+  assertEquals(cache.peek("y"), 7);
+  assertEquals(cache.has("x"), false);
+});
+
 // ─── Stale-while-revalidate (SWR) ───────────────────
 
 Deno.test("Cache SWR constructor throws on invalid staleTtl", () => {

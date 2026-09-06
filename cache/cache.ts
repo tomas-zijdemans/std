@@ -71,8 +71,9 @@ export interface CacheOptionsShared<K, V> {
    * synchronous operation that removed the entry (such as
    * {@linkcode Cache.prototype.delete | delete()} or
    * {@linkcode Cache.prototype.clear | clear()}). Exceptions thrown during
-   * timer-driven expiration or a background refresh have no caller to
-   * propagate to and are discarded.
+   * timer-driven expiration, a background refresh, or the insertion of a
+   * value loaded by {@linkcode Cache.prototype.getOrLoad | getOrLoad()}
+   * have no caller to propagate to and are discarded.
    *
    * @param key The key of the removed entry.
    * @param value The value of the removed entry.
@@ -1069,7 +1070,12 @@ export class Cache<K, V> implements CacheLike<K, V> {
         // entry, so this check alone is sufficient to detect discards.
         if (inFlight.get(key) !== promise) return value;
         inFlight.delete(key);
-        this.set(key, value, options);
+        try {
+          this.set(key, value, options);
+        } catch {
+          // The value is loaded and cached; an onRemove error from the
+          // eviction it triggered must not reject callers, same as refresh.
+        }
         return value;
       },
       (error) => {
