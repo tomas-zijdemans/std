@@ -855,6 +855,16 @@ Deno.test("Cache getOrLoad() loader does not re-populate after clear()", async (
   assertEquals(cache.has("a"), false);
 });
 
+Deno.test("Cache getOrLoad() treats a non-promise loader result as a resolved value", async () => {
+  const cache = new Cache<string, number>({ maxSize: 100 });
+  // Untyped JS callers can return a plain value; it must not throw synchronously.
+  const loader = (() => 42) as unknown as () => Promise<number>;
+  const promise = cache.getOrLoad("a", loader);
+  assert(promise instanceof Promise);
+  assertEquals(await promise, 42);
+  assertEquals(cache.get("a"), 42);
+});
+
 // ─── Stale-while-revalidate (SWR) ───────────────────
 
 Deno.test("Cache SWR constructor throws on invalid staleTtl", () => {
@@ -992,6 +1002,22 @@ Deno.test("Cache SWR refresh failure retains stale value and calls onRefreshErro
 
   assertEquals(cache.get("a"), 1);
   assertEquals(cache.stats.refreshErrors, 1);
+});
+
+Deno.test("Cache SWR treats a non-promise refresh result as a resolved value", async () => {
+  using time = new FakeTime(0);
+  using cache = new Cache<string, number>({
+    ttl: 1000,
+    staleTtl: 500,
+    refresh: (() => 2) as unknown as () => Promise<number>,
+  });
+
+  cache.set("a", 1);
+  time.tick(501);
+  assertEquals(cache.get("a"), 1);
+
+  await Promise.resolve();
+  assertEquals(cache.get("a"), 2);
 });
 
 Deno.test("Cache SWR refresh resets both deadlines", async () => {

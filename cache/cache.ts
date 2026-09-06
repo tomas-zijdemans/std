@@ -729,7 +729,9 @@ export class Cache<K, V> implements CacheLike<K, V> {
     const absDeadline = entry.absoluteDeadline;
     let refreshResult: Promise<V>;
     try {
-      refreshResult = this.#refresh!(key, staleValue);
+      // Promise.resolve keeps a non-promise return from a JS caller on the
+      // rejection path instead of escaping as a synchronous TypeError.
+      refreshResult = Promise.resolve(this.#refresh!(key, staleValue));
     } catch (error) {
       this.#refreshing?.delete(key);
       this.#stats.refreshErrors++;
@@ -1056,7 +1058,8 @@ export class Cache<K, V> implements CacheLike<K, V> {
     const inFlight = (this.#inFlight ??= new Map());
     let loaderResult: Promise<V>;
     try {
-      loaderResult = loader(key);
+      // See #backgroundRefresh: a non-promise return must not throw here.
+      loaderResult = Promise.resolve(loader(key));
     } catch (error) {
       return Promise.reject(error);
     }
