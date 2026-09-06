@@ -23,9 +23,10 @@ export interface TokenBucketOptions extends QueueOptions {
   /** Replenishment interval in milliseconds. */
   replenishmentPeriod: number;
   /**
-   * Start an internal timer for automatic replenishment. Requires
-   * `replenishmentPeriod` to be at most 2^31 - 1 milliseconds (the
-   * `setInterval` limit).
+   * Refill tokens automatically. Tokens are always accounted for lazily on
+   * acquire; the internal timer is only started when `queueLimit` is
+   * greater than `0`, to drain waiters. It requires `replenishmentPeriod`
+   * to be at most 2^31 - 1 milliseconds (the `setInterval` limit).
    *
    * When `false`, call {@linkcode ReplenishingRateLimiter.replenish}
    * manually.
@@ -106,7 +107,7 @@ export function createTokenBucket(
 
   const { limit, tokensPerPeriod, replenishmentPeriod } = options;
   const autoReplenishment = options.autoReplenishment ?? true;
-  if (autoReplenishment) {
+  if (autoReplenishment && (options.queueLimit ?? 0) > 0) {
     assertTimerInterval(context, "'replenishmentPeriod'", replenishmentPeriod);
   }
   const clock = options.clock ?? Date.now;

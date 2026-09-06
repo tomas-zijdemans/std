@@ -30,7 +30,7 @@ Deno.test("createGcra() throws for invalid options", () => {
         "Cannot create gcra: 'queueLimit' must be a non-negative integer, received -1",
       ],
       [
-        { limit: 1, window: 2 ** 32 },
+        { limit: 1, window: 2 ** 32, queueLimit: 1 },
         `Cannot create gcra: 'window' / 'limit' (${
           2 ** 32
         }) exceeds the maximum timer interval of ${2 ** 31 - 1} milliseconds`,

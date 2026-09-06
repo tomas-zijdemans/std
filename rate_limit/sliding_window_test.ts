@@ -74,7 +74,7 @@ Deno.test("createSlidingWindow() throws for invalid options", () => {
       "Cannot create sliding window: 'queueLimit' must be a non-negative integer, received -1",
     ],
     [
-      { limit: 1, window: 2 ** 33, segmentsPerWindow: 2 },
+      { limit: 1, window: 2 ** 33, segmentsPerWindow: 2, queueLimit: 1 },
       `Cannot create sliding window: 'window' / 'segmentsPerWindow' (${
         2 ** 32
       }) exceeds the maximum timer interval of ${2 ** 31 - 1} milliseconds`,

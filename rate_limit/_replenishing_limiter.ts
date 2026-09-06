@@ -94,7 +94,9 @@ export function createReplenishingLimiter(
 
   const isNewestFirst = config.queueOrder === "newest-first";
 
-  if (config.autoReplenishment) {
+  // Without a queue there is nothing to drain; `tryAcquirePermits` already
+  // advances the algorithm lazily, so a timer would only burn CPU.
+  if (config.autoReplenishment && config.queueLimit > 0) {
     timer = setInterval(replenishAndDrain, config.replenishmentPeriod);
     unrefTimer(timer);
   }

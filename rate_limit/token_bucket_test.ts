@@ -79,7 +79,12 @@ Deno.test("createTokenBucket() throws for invalid options", () => {
       "Cannot create token bucket: 'queueLimit' must be a non-negative integer, received -1",
     ],
     [
-      { limit: 1, tokensPerPeriod: 1, replenishmentPeriod: 2 ** 31 },
+      {
+        limit: 1,
+        tokensPerPeriod: 1,
+        replenishmentPeriod: 2 ** 31,
+        queueLimit: 1,
+      },
       `Cannot create token bucket: 'replenishmentPeriod' (${
         2 ** 31
       }) exceeds the maximum timer interval of ${2 ** 31 - 1} milliseconds`,

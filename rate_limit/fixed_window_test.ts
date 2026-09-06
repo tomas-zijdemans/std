@@ -881,11 +881,29 @@ Deno.test("acquire() drains a queued waiter with a non-aborted signal cleanly", 
   controller.abort();
 });
 
+// --- Replenishment timer ---
+
+Deno.test("createFixedWindow() does not start a timer when queueLimit is 0", () => {
+  using time = new FakeTime(0);
+  using limiter = createFixedWindow({ limit: 1, window: 1000 });
+  // `next()` returns false when no timer is pending.
+  assertFalse(time.next());
+  limiter.tryAcquire();
+  time.tick(1000);
+  assert(limiter.tryAcquire().acquired);
+});
+
+Deno.test("createFixedWindow() starts a timer when queueLimit is set", () => {
+  using time = new FakeTime(0);
+  using _limiter = createFixedWindow({ limit: 1, window: 1000, queueLimit: 1 });
+  assert(time.next());
+});
+
 // --- Timer interval cap ---
 
 Deno.test("createFixedWindow() throws when window exceeds the timer maximum", () => {
   assertThrows(
-    () => createFixedWindow({ limit: 1, window: 2 ** 31 }),
+    () => createFixedWindow({ limit: 1, window: 2 ** 31, queueLimit: 1 }),
     RangeError,
     `Cannot create fixed window: 'window' (${
       2 ** 31

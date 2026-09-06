@@ -21,10 +21,11 @@ export interface GcraOptions extends QueueOptions {
   /** Window duration in milliseconds over which `limit` permits are allowed. */
   window: number;
   /**
-   * Start an internal timer that drains queued waiters as capacity frees
-   * up, ticking once per emission interval (`window` / `limit`). Requires
-   * the emission interval to be at most 2^31 - 1 milliseconds (the
-   * `setInterval` limit).
+   * Drain queued waiters automatically as capacity frees up. Capacity is
+   * always accounted for lazily on acquire; the internal timer is only
+   * started when `queueLimit` is greater than `0`, ticking once per
+   * emission interval (`window` / `limit`). It requires the emission
+   * interval to be at most 2^31 - 1 milliseconds (the `setInterval` limit).
    *
    * When `false`, call {@linkcode ReplenishingRateLimiter.replenish}
    * manually.
@@ -98,7 +99,7 @@ export function createGcra(options: GcraOptions): ReplenishingRateLimiter {
   const { limit, window } = options;
   const emissionInterval = window / limit;
   const autoReplenishment = options.autoReplenishment ?? true;
-  if (autoReplenishment) {
+  if (autoReplenishment && (options.queueLimit ?? 0) > 0) {
     assertTimerInterval(context, "'window' / 'limit'", emissionInterval);
   }
   const clock = options.clock ?? Date.now;
