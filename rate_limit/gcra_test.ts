@@ -67,6 +67,22 @@ Deno.test("tryAcquire() allows an initial burst up to the limit", () => {
   assertFalse(limiter.tryAcquire().acquired);
 });
 
+Deno.test("tryAcquire() allows exactly limit permits in a burst for every limit", () => {
+  for (const limit of [3, 7, 11, 12, 13, 14, 30, 60, 100, 1000]) {
+    for (const window of [1000, 1234, 60_000]) {
+      using limiter = createGcra({
+        limit,
+        window,
+        autoReplenishment: false,
+        clock: () => 0,
+      });
+      let allowed = 0;
+      while (limiter.tryAcquire().acquired) allowed++;
+      assertEquals(allowed, limit, `limit=${limit} window=${window}`);
+    }
+  }
+});
+
 Deno.test("tryAcquire() frees capacity continuously at the emission interval", () => {
   let now = 0;
   using limiter = createGcra({

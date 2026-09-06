@@ -246,9 +246,13 @@ export function createTokenBucketOps(
 
 // --- GCRA (Generic Cell Rate Algorithm) ---
 
-/** State for GCRA: theoretical arrival time (tat) of the last request. */
+/**
+ * State for GCRA: theoretical arrival time (TAT) of the last request, scaled
+ * by `limit` so the emission interval is the integer `window` and no
+ * `window / limit` rounding accumulates across requests.
+ */
 export interface GcraState {
-  tat: number;
+  tatScaled: number;
 }
 
 /**
@@ -265,48 +269,52 @@ export function createGcraOps(
   const context = "gcra";
   assertPositiveInteger(context, "limit", limit);
   assertPositiveFinite(context, "window", window);
-  const emissionInterval = window / limit;
-  const tau = window;
+  // All arithmetic runs in units scaled by `limit`: one permit costs
+  // `window`, and the burst allowance (tau) is `window * limit`.
+  const tauScaled = window * limit;
 
-  function remaining(state: GcraState, now: number): number {
-    const diff = tau - (state.tat - now);
-    return Math.min(limit, Math.max(0, Math.floor(diff / emissionInterval)));
+  function remaining(state: GcraState, nowScaled: number): number {
+    const diff = tauScaled - (state.tatScaled - nowScaled);
+    return Math.min(limit, Math.max(0, Math.floor(diff / window)));
   }
 
   return {
     limit,
     create(now) {
-      return { tat: now };
+      return { tatScaled: now * limit };
     },
     advance(_state, _now) {},
     tryConsume(state: GcraState, cost: number, now: number) {
-      const allowAt = state.tat - tau;
-      if (now < allowAt) return false;
-      const newTat = Math.max(state.tat, now) + emissionInterval * cost;
-      if (newTat - now > tau) return false;
-      state.tat = newTat;
+      const nowScaled = now * limit;
+      const allowAt = state.tatScaled - tauScaled;
+      if (nowScaled < allowAt) return false;
+      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
+      if (newTat - nowScaled > tauScaled) return false;
+      state.tatScaled = newTat;
       return true;
     },
     wouldAllow(state: GcraState, cost: number, now: number) {
-      const allowAt = state.tat - tau;
-      if (now < allowAt) return false;
-      const newTat = Math.max(state.tat, now) + emissionInterval * cost;
-      return newTat - now <= tau;
+      const nowScaled = now * limit;
+      const allowAt = state.tatScaled - tauScaled;
+      if (nowScaled < allowAt) return false;
+      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
+      return newTat - nowScaled <= tauScaled;
     },
     result(state, ok, cost, now) {
       return {
         ok,
-        remaining: remaining(state, now),
-        resetAt: state.tat,
+        remaining: remaining(state, now * limit),
+        resetAt: state.tatScaled / limit,
         retryAfter: ok ? 0 : this.computeRetryAfter(state, cost, now),
         limit,
       };
     },
     computeRetryAfter(state, cost, now) {
-      const allowAt = state.tat - tau;
-      if (now < allowAt) return allowAt - now;
-      const newTat = Math.max(state.tat, now) + emissionInterval * cost;
-      return Math.max(0, newTat - tau - now);
+      const nowScaled = now * limit;
+      const allowAt = state.tatScaled - tauScaled;
+      if (nowScaled < allowAt) return (allowAt - nowScaled) / limit;
+      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
+      return Math.max(0, (newTat - tauScaled - nowScaled) / limit);
     },
   };
 }

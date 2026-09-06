@@ -773,7 +773,7 @@ Deno.test("peek() returns full capacity for unknown key", async () => {
 // (the next replenishment event), not `now`. Fixed-window and token-bucket
 // replenish at `now + window`; sliding-window rotates at the end of the
 // current segment. GCRA has no scheduled replenishment, so resetAt === now
-// is correct (state.tat is initialized to now).
+// is correct (the TAT is initialized to now).
 Deno.test("peek() on unknown key reports forward-looking resetAt", async () => {
   const now = 1000;
 
@@ -1565,6 +1565,30 @@ Deno.test("concurrent limit() calls on the same key respect the limit", async ()
   const denied = results.filter((r) => !r.ok).length;
   assertEquals(allowed, 2);
   assertEquals(denied, 1);
+});
+
+// Regression: accumulating `window / limit` per request drifted the TAT past
+// tau by an ULP, so some limits admitted `limit - 1` permits in a burst.
+Deno.test("limit() allows exactly limit permits in a burst for every limit with gcra", async () => {
+  for (const limit of [3, 7, 11, 12, 13, 14, 30, 60, 100, 1000]) {
+    for (const window of [1000, 1234, 60_000]) {
+      let now = 0;
+      await using limiter = createRateLimiter({
+        limit,
+        window,
+        algorithm: "gcra",
+        evictionTtl: 0,
+        clock: () => now,
+      });
+      let allowed = 0;
+      while ((await limiter.limit("a")).ok) allowed++;
+      assertEquals(allowed, limit, `limit=${limit} window=${window}`);
+      now += window;
+      allowed = 0;
+      while ((await limiter.limit("a")).ok) allowed++;
+      assertEquals(allowed, limit, `refill limit=${limit} window=${window}`);
+    }
+  }
 });
 
 // --- GCRA clock regression ---
