@@ -247,7 +247,7 @@ export interface CacheSetOptions {
   /**
    * Override the default
    * {@linkcode CacheOptionsSwr.staleTtl | staleTtl} for this entry.
-   * Ignored when the cache was not constructed with
+   * Throws a `TypeError` when the cache was not constructed with
    * {@linkcode CacheOptionsSwr.refresh | refresh}. Must be a finite
    * non-negative number.
    */
@@ -915,6 +915,11 @@ export class Cache<K, V> implements CacheLike<K, V> {
     if (abs !== undefined && (!(abs >= 0) || !Number.isFinite(abs))) {
       throw new RangeError(
         `Cannot set entry in Cache: absoluteExpiration must be a finite non-negative number, received ${abs}`,
+      );
+    }
+    if (options?.staleTtl !== undefined && this.#refresh === undefined) {
+      throw new TypeError(
+        "Cannot set entry in Cache: staleTtl requires the cache to be constructed with refresh",
       );
     }
     if (

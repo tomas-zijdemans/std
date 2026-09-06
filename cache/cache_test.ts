@@ -1754,6 +1754,21 @@ Deno.test("Cache set() throws when per-entry staleTtl >= per-entry ttl", () => {
   cache[Symbol.dispose]();
 });
 
+Deno.test("Cache set() throws TypeError for per-entry staleTtl without refresh", () => {
+  using cache = new Cache<string, number>({ ttl: 1000 });
+  assertThrows(
+    () => cache.set("a", 1, { staleTtl: 500 }),
+    TypeError,
+    "staleTtl requires the cache to be constructed with refresh",
+  );
+  assertThrows(
+    () => cache.set("a", 1, { staleTtl: 2000 }),
+    TypeError,
+    "staleTtl requires the cache to be constructed with refresh",
+  );
+  assertEquals(cache.has("a"), false);
+});
+
 // ─── set() clears stale in-flight entries ────────────
 
 Deno.test("Cache set() clears in-flight getOrLoad so next getOrLoad uses fresh loader", async () => {
