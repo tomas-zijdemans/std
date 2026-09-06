@@ -353,7 +353,7 @@ Deno.test("limit() prevents boundary bursts with sliding-window", async () => {
   assert((await limiter.limit("a", { cost: 10 })).ok);
 });
 
-Deno.test("limit() reports retryAfter as the next segment rotation with sliding-window", async () => {
+Deno.test("limit() reports retryAfter as the full window when the only permit is in the newest segment with sliding-window", async () => {
   const now = 0;
   await using limiter = createRateLimiter({
     limit: 1,
@@ -367,7 +367,40 @@ Deno.test("limit() reports retryAfter as the next segment rotation with sliding-
   await limiter.limit("a");
   const r = await limiter.limit("a");
   assertFalse(r.ok);
-  assertEquals(r.retryAfter, 250);
+  assertEquals(r.retryAfter, 1000);
+});
+
+// Regression: retryAfter used to report the next rotation even when that
+// rotation freed nothing, so a client obeying Retry-After retried for nothing.
+Deno.test("limit() reports retryAfter as the time until enough permits free with sliding-window", async () => {
+  let now = 0;
+  await using limiter = createRateLimiter({
+    limit: 10,
+    window: 1000,
+    algorithm: "sliding-window",
+    segmentsPerWindow: 10,
+    evictionTtl: 0,
+    clock: () => now,
+  });
+
+  // Segment 0: 4 permits. Segment 1: 6 permits.
+  await limiter.limit("a", { cost: 4 });
+  now = 100;
+  await limiter.limit("a", { cost: 6 });
+  now = 150;
+
+  // Needs 3 permits: segment 0 (4) rotates out at t=1000.
+  const r1 = await limiter.limit("a", { cost: 3 });
+  assertFalse(r1.ok);
+  assertEquals(r1.retryAfter, 850);
+
+  // Needs 5 permits: segment 0 alone is not enough; segment 1 rotates out at t=1100.
+  const r2 = await limiter.limit("a", { cost: 5 });
+  assertFalse(r2.ok);
+  assertEquals(r2.retryAfter, 950);
+
+  now = 1000;
+  assert((await limiter.limit("a", { cost: 3 })).ok);
 });
 
 Deno.test("limit() reports exact remaining with sliding-window", async () => {
@@ -1622,7 +1655,7 @@ Deno.test("limit() clamps retryAfter to the algorithm maximum when the clock reg
     max: number,
   ][] = [
     ["fixed-window", 1000],
-    ["sliding-window", 250],
+    ["sliding-window", 1000],
     ["token-bucket", 1000],
     ["gcra", 1000],
   ];

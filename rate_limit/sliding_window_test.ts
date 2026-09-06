@@ -124,7 +124,27 @@ Deno.test("tryAcquire() acquires multiple permits at once", () => {
   assert(limiter.tryAcquire(2).acquired);
 });
 
-Deno.test("tryAcquire() rejects with retryAfter equal to segment duration", () => {
+Deno.test("tryAcquire() reports retryAfter as the time until enough permits free", () => {
+  let now = 0;
+  using limiter = createSlidingWindow({
+    limit: 10,
+    window: 1000,
+    segmentsPerWindow: 4,
+    autoReplenishment: false,
+    clock: () => now,
+  });
+
+  limiter.tryAcquire(10);
+  now = 50;
+  const lease = limiter.tryAcquire(5);
+  assertFalse(lease.acquired);
+  // Every permit sits in the first segment, which rotates out at t=1000.
+  assertEquals(lease.retryAfter, 950);
+  now = 1000;
+  assert(limiter.tryAcquire(5).acquired);
+});
+
+Deno.test("tryAcquire() rejects with retryAfter equal to the window when the only permit is in the newest segment", () => {
   using _time = new FakeTime(0);
   using limiter = createSlidingWindow({
     limit: 1,
@@ -135,7 +155,7 @@ Deno.test("tryAcquire() rejects with retryAfter equal to segment duration", () =
   limiter.tryAcquire();
   const lease = limiter.tryAcquire();
   assertFalse(lease.acquired);
-  assertEquals(lease.retryAfter, 250);
+  assertEquals(lease.retryAfter, 1000);
   assertEquals(lease.reason, "Insufficient permits");
 });
 

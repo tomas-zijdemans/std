@@ -22,12 +22,10 @@ export interface RateLimitResult {
    */
   readonly resetAt: number;
   /**
-   * Minimum retry delay in milliseconds. `0` when the request is allowed.
-   * This is the earliest point at which capacity *may* free up. For
-   * sliding-window, this reflects the next segment rotation and may not
-   * free enough permits for a high-cost request. For token-bucket and GCRA
-   * the value accounts for the requested cost. Useful for the
-   * `Retry-After` HTTP header.
+   * Retry delay in milliseconds. `0` when the request is allowed. When
+   * denied, this is the delay after which a request of the same cost will
+   * be allowed, assuming no other requests consume permits in the
+   * meantime. Useful for the `Retry-After` HTTP header.
    */
   readonly retryAfter: number;
   /** The limit configured for this limiter. */

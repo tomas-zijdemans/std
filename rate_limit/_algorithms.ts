@@ -10,10 +10,8 @@ import { assertPositiveFinite, assertPositiveInteger } from "./_validation.ts";
  *
  * **Metadata semantics vary by algorithm:**
  *
- * - `retryAfter` is the *minimum* delay before capacity *may* free up. For
- *   sliding-window this is the time until the next segment rotation, which may
- *   not free enough permits for a high-cost request. For token-bucket and GCRA
- *   the value accounts for the requested cost.
+ * - `retryAfter` is the delay after which a request of the same cost will be
+ *   allowed, assuming no other requests consume permits in the meantime.
  * - `resetAt` is the timestamp of the next replenishment event (segment
  *   rotation, window boundary, or refill cycle). For sliding-window and
  *   token-bucket this is *not* necessarily when full capacity is restored.
@@ -175,12 +173,18 @@ export function createSlidingWindowOps(
         limit,
       };
     },
-    // Clamped so a clock that steps backwards cannot report more than one segment.
-    computeRetryAfter(state, _cost, now) {
-      return Math.min(
-        segmentDuration,
-        state.segmentStart + segmentDuration - now,
-      );
+    // Walks segments oldest-first until enough permits have rotated out to
+    // fit `cost`. Elapsed is clamped so a clock that steps backwards cannot
+    // inflate the delay.
+    computeRetryAfter(state, cost, now) {
+      const deficit = state.counter.total + cost - limit;
+      const elapsed = Math.max(0, now - state.segmentStart);
+      let freed = 0;
+      for (let i = 0; i < segmentsPerWindow; i++) {
+        freed += state.counter.at(i)!;
+        if (freed >= deficit) return (i + 1) * segmentDuration - elapsed;
+      }
+      return window - elapsed;
     },
   };
 }
