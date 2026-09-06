@@ -97,14 +97,15 @@ Module files (`mod.ts`) need a `@module` tag.
 
 ## Error Message Style
 
-- Sentence case, no trailing period
-- Active voice: "Cannot parse input x" not "Input x cannot be parsed"
-- No contractions: "Cannot" not "Can't"
-- Quote string values: `Cannot parse input "hello, world"`
-- Use colons for context: `Cannot parse input x: value is empty`
-- State current and desired state when possible
+Follow
+[Error Messages in CONTRIBUTING.md](./.github/CONTRIBUTING.md#error-messages)
+when writing user-facing error messages.
 
-Exception: `@std/assert` uses periods in error messages (downstream compat).
+## Error Classes
+
+Follow
+[Error Classes in CONTRIBUTING.md](./.github/CONTRIBUTING.md#error-classes) when
+choosing which error class to throw.
 
 ## CI Pipeline
 
