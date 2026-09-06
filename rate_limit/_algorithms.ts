@@ -99,8 +99,9 @@ export function createFixedWindowOps(
         limit,
       };
     },
+    // Clamped so a clock that steps backwards cannot report more than one window.
     computeRetryAfter(state, _cost, now) {
-      return state.windowStart + window - now;
+      return Math.min(window, state.windowStart + window - now);
     },
   };
 }
@@ -174,8 +175,12 @@ export function createSlidingWindowOps(
         limit,
       };
     },
+    // Clamped so a clock that steps backwards cannot report more than one segment.
     computeRetryAfter(state, _cost, now) {
-      return state.segmentStart + segmentDuration - now;
+      return Math.min(
+        segmentDuration,
+        state.segmentStart + segmentDuration - now,
+      );
     },
   };
 }
@@ -236,10 +241,12 @@ export function createTokenBucketOps(
         limit,
       };
     },
+    // Elapsed is clamped so a clock that steps backwards cannot inflate the delay.
     computeRetryAfter(state, cost, now) {
       const deficit = cost - state.tokens;
       const cycles = Math.ceil(deficit / tokensPerPeriod);
-      return Math.max(0, cycles * window - (now - state.lastRefill));
+      const elapsed = Math.max(0, now - state.lastRefill);
+      return Math.max(0, cycles * window - elapsed);
     },
   };
 }
@@ -309,12 +316,16 @@ export function createGcraOps(
         limit,
       };
     },
+    // A monotonic clock never exceeds `cost` emission intervals; the clamp
+    // only bites when the clock steps backwards.
     computeRetryAfter(state, cost, now) {
       const nowScaled = now * limit;
       const allowAt = state.tatScaled - tauScaled;
-      if (nowScaled < allowAt) return (allowAt - nowScaled) / limit;
       const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
-      return Math.max(0, (newTat - tauScaled - nowScaled) / limit);
+      const waitScaled = nowScaled < allowAt
+        ? allowAt - nowScaled
+        : Math.max(0, newTat - tauScaled - nowScaled);
+      return Math.min(window * cost, waitScaled) / limit;
     },
   };
 }

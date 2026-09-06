@@ -4,6 +4,7 @@ import { assert, assertEquals, assertFalse, assertThrows } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
 import { createRateLimiter } from "./rate_limiter.ts";
 import { createMemoryStore } from "./memory_store.ts";
+import type { AlgorithmOptions } from "./store_types.ts";
 
 // --- Factory validation ---
 
@@ -1611,6 +1612,36 @@ Deno.test("limit() rejects when the clock regresses past allowAt with gcra", asy
   const r = await limiter.limit("a");
   assertFalse(r.ok);
   assert(r.retryAfter > 0);
+});
+
+// Regression: a store clock that steps backwards must never report a
+// retryAfter longer than the algorithm's own maximum.
+Deno.test("limit() clamps retryAfter to the algorithm maximum when the clock regresses", async () => {
+  const cases: [
+    algorithm: NonNullable<AlgorithmOptions["algorithm"]>,
+    max: number,
+  ][] = [
+    ["fixed-window", 1000],
+    ["sliding-window", 250],
+    ["token-bucket", 1000],
+    ["gcra", 1000],
+  ];
+  for (const [algorithm, max] of cases) {
+    let now = 10_000;
+    await using limiter = createRateLimiter({
+      limit: 1,
+      window: 1000,
+      algorithm,
+      segmentsPerWindow: 4,
+      evictionTtl: 0,
+      clock: () => now,
+    });
+    await limiter.limit("a");
+    now -= 5000;
+    const r = await limiter.limit("a");
+    assertFalse(r.ok);
+    assertEquals(r.retryAfter, max, `${algorithm}`);
+  }
 });
 
 // --- Memory store metadata ---
