@@ -273,6 +273,14 @@ function runNextTimer(limit: number): boolean {
   return false;
 }
 
+function assertNotInPast(value: number) {
+  if (value < now) {
+    throw new RangeError(
+      `Cannot set current time in the past, time must be >= ${now}: received ${value}`,
+    );
+  }
+}
+
 let startedAt: number;
 let now: number;
 let initializedAt: number;
@@ -532,11 +540,7 @@ export class FakeTime {
    * @param value The current time (in milliseconds)
    */
   set now(value: number) {
-    if (value < now) {
-      throw new RangeError(
-        `Cannot set current time in the past, time must be >= ${now}: received ${value}`,
-      );
-    }
+    assertNotInPast(value);
     while (runNextTimer(value));
     now = value;
   }
@@ -705,10 +709,12 @@ export class FakeTime {
    * Callers must drain microtasks before calling.
    */
   async #advanceAsync(target: number) {
+    assertNotInPast(target);
     while (runNextTimer(target)) {
       await this.runMicrotasks();
     }
-    now = target;
+    // A callback or microtask may have moved the clock past the target.
+    if (now < target) now = target;
   }
 
   /**

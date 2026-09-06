@@ -638,6 +638,30 @@ Deno.test("FakeTime.tickAsync() stops at a throwing timer and leaves later timer
   assertSpyCalls(cb, 1);
 });
 
+Deno.test("FakeTime.tickAsync() rejects a negative tick and leaves time unchanged", async () => {
+  using time = new FakeTime(100);
+  await assertRejects(
+    () => time.tickAsync(-10),
+    RangeError,
+    "Cannot set current time in the past, time must be >= 100: received 90",
+  );
+  assertEquals(time.now, 100);
+});
+
+Deno.test("FakeTime.tickAsync() keeps time advanced by a microtask beyond the target", async () => {
+  using time = new FakeTime(0);
+  const cb = spy();
+
+  setTimeout(() => {
+    Promise.resolve().then(() => time.tick(20));
+  }, 10);
+  setTimeout(cb, 25);
+  await time.tickAsync(10);
+
+  assertEquals(time.now, 30);
+  assertSpyCalls(cb, 1);
+});
+
 Deno.test("FakeTime.nextAsync() runs microtasks between timers with equal deadlines", async () => {
   using time = new FakeTime(0);
   const seq: string[] = [];
