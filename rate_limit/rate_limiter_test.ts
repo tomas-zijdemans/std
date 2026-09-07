@@ -1769,6 +1769,58 @@ Deno.test("createRateLimiter() extends the default evictionTtl to cover the toke
   assert((await limiter.limit("key", { cost: 10 })).ok);
 });
 
+Deno.test("limit() and peek() preserve a large GCRA burst at epoch time", async () => {
+  const limit = 100_000;
+  let now = 1_757_000_000_000;
+  await using limiter = createRateLimiter({
+    limit,
+    window: 1000,
+    algorithm: "gcra",
+    evictionTtl: 0,
+    clock: () => now,
+  });
+
+  for (let i = 0; i < limit; i++) {
+    assert((await limiter.limit("a")).ok);
+  }
+  const peek = await limiter.peek("a");
+  assertFalse(peek.ok);
+  assertEquals(peek.remaining, 0);
+  assertEquals(peek.retryAfter, 0.01);
+  assertEquals(peek.resetAt, now + 1000);
+  assertEquals(await limiter.limit("a"), peek);
+
+  for (let i = 0; i < 1000; i++) {
+    now++;
+    const result = await limiter.limit("a", { cost: 100 });
+    assert(result.ok);
+    assertEquals(result.remaining, 0);
+    assertEquals(result.resetAt, now + 1000);
+  }
+
+  now += 2000;
+  const idle = await limiter.peek("a");
+  assert(idle.ok);
+  assertEquals(idle.remaining, limit);
+  assertEquals(idle.resetAt, now);
+  assert((await limiter.limit("a", { cost: limit })).ok);
+  assertFalse((await limiter.limit("a")).ok);
+});
+
+Deno.test("createRateLimiter() validates GCRA integer arithmetic", () => {
+  for (const window of [0.5, 2 ** 52]) {
+    assertThrows(
+      () => createRateLimiter({ limit: 2, window, algorithm: "gcra" }),
+      RangeError,
+      window === 0.5
+        ? "Cannot create gcra: 'window' must be a positive integer, received 0.5"
+        : `Cannot create gcra: 'window' * 'limit' must be below 2 ** 53, received ${
+          2 ** 53
+        }`,
+    );
+  }
+});
+
 // --- Process lifetime ---
 
 Deno.test("createRateLimiter() does not keep the process alive when undisposed", async () => {

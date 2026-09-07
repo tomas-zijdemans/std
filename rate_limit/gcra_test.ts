@@ -19,11 +19,15 @@ Deno.test("createGcra() throws for invalid options", () => {
       ],
       [
         { limit: 10, window: 0 },
-        "Cannot create gcra: 'window' must be a positive finite number, received 0",
+        "Cannot create gcra: 'window' must be a positive integer, received 0",
       ],
       [
         { limit: 10, window: Infinity },
-        "Cannot create gcra: 'window' must be a positive finite number, received Infinity",
+        "Cannot create gcra: 'window' must be a positive integer, received Infinity",
+      ],
+      [
+        { limit: 10, window: 0.5 },
+        "Cannot create gcra: 'window' must be a positive integer, received 0.5",
       ],
       [
         { limit: 10, window: 1000, queueLimit: -1 },
@@ -81,6 +85,52 @@ Deno.test("tryAcquire() allows exactly limit permits in a burst for every limit"
       assertEquals(allowed, limit, `limit=${limit} window=${window}`);
     }
   }
+});
+
+Deno.test("tryAcquire() preserves a large GCRA burst at epoch time", () => {
+  const limit = 100_000;
+  let now = 1_757_000_000_000;
+  using limiter = createGcra({
+    limit,
+    window: 1000,
+    autoReplenishment: false,
+    clock: () => now,
+  });
+
+  for (let i = 0; i < limit; i++) {
+    assert(limiter.tryAcquire().acquired);
+  }
+  const denied = limiter.tryAcquire();
+  assertFalse(denied.acquired);
+  assertEquals(denied.retryAfter, 0.01);
+
+  for (let i = 0; i < 1000; i++) {
+    now++;
+    assert(limiter.tryAcquire(100).acquired);
+    assertFalse(limiter.tryAcquire().acquired);
+  }
+
+  now += 1000;
+  assert(limiter.tryAcquire(limit).acquired);
+  assertFalse(limiter.tryAcquire().acquired);
+});
+
+Deno.test("createGcra() validates the scaled window boundary", () => {
+  assertThrows(
+    () => createGcra({ limit: 2, window: 2 ** 52 }),
+    RangeError,
+    `Cannot create gcra: 'window' * 'limit' must be below 2 ** 53, received ${
+      2 ** 53
+    }`,
+  );
+  using limiter = createGcra({
+    limit: 2,
+    window: 2 ** 52 - 1,
+    autoReplenishment: false,
+    clock: () => 0,
+  });
+  assert(limiter.tryAcquire(2).acquired);
+  assertFalse(limiter.tryAcquire().acquired);
 });
 
 Deno.test("tryAcquire() frees capacity continuously at the emission interval", () => {

@@ -5,7 +5,6 @@ import { createReplenishingLimiter } from "./_replenishing_limiter.ts";
 import { createGcraOps } from "./_algorithms.ts";
 import {
   assertNonNegativeInteger,
-  assertPositiveFinite,
   assertPositiveInteger,
   assertTimerInterval,
 } from "./_validation.ts";
@@ -18,7 +17,10 @@ import {
 export interface GcraOptions extends QueueOptions {
   /** Maximum burst of permits, and permits allowed per window on average. */
   limit: number;
-  /** Window duration in milliseconds over which `limit` permits are allowed. */
+  /**
+   * Positive integer duration in milliseconds over which `limit` permits
+   * are allowed. `window * limit` must be below `2 ** 53`.
+   */
   window: number;
   /**
    * Drain queued waiters automatically as capacity frees up. Capacity is
@@ -93,7 +95,7 @@ export interface GcraOptions extends QueueOptions {
 export function createGcra(options: GcraOptions): ReplenishingRateLimiter {
   const context = "gcra";
   assertPositiveInteger(context, "limit", options.limit);
-  assertPositiveFinite(context, "window", options.window);
+  assertPositiveInteger(context, "window", options.window);
   assertNonNegativeInteger(context, "queueLimit", options.queueLimit);
 
   const { limit, window } = options;

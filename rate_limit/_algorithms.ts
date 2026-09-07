@@ -253,19 +253,19 @@ export function createTokenBucketOps(
 // --- GCRA (Generic Cell Rate Algorithm) ---
 
 /**
- * State for GCRA: theoretical arrival time (TAT) of the last request, scaled
- * by `limit` so the emission interval is the integer `window` and no
- * `window / limit` rounding accumulates across requests.
+ * TAT relative to `updatedAt`, scaled by `limit`. The offset is bounded by
+ * `window * limit`, so precision does not depend on the clock's epoch.
  */
 export interface GcraState {
-  tatScaled: number;
+  tatOffset: number;
+  updatedAt: number;
 }
 
 /**
  * Creates ops for the GCRA (Generic Cell Rate Algorithm). Callers must pass valid parameters.
  *
  * @param limit Maximum permits per window. Must be a positive integer.
- * @param window Window (tau) in milliseconds. Must be a positive finite number.
+ * @param window Window (tau) in milliseconds. Must be a positive integer with `window * limit < 2 ** 53`.
  * @returns Algorithm ops for GCRA rate limiting.
  */
 export function createGcraOps(
@@ -274,43 +274,55 @@ export function createGcraOps(
 ): AlgorithmOps<GcraState> {
   const context = "gcra";
   assertPositiveInteger(context, "limit", limit);
-  assertPositiveFinite(context, "window", window);
+  assertPositiveInteger(context, "window", window);
+  if (window * limit >= 2 ** 53) {
+    throw new RangeError(
+      `Cannot create ${context}: 'window' * 'limit' must be below 2 ** 53, received ${
+        window * limit
+      }`,
+    );
+  }
   // All arithmetic runs in units scaled by `limit`: one permit costs
   // `window`, and the burst allowance (tau) is `window * limit`.
   const tauScaled = window * limit;
 
-  function remaining(state: GcraState, nowScaled: number): number {
-    const diff = tauScaled - (state.tatScaled - nowScaled);
-    return Math.min(limit, Math.max(0, Math.floor(diff / window)));
+  function offsetAt(state: GcraState, now: number): number {
+    return Math.max(0, state.tatOffset - (now - state.updatedAt) * limit);
+  }
+
+  function remaining(offset: number): number {
+    return Math.min(
+      limit,
+      Math.max(0, Math.floor((tauScaled - offset) / window)),
+    );
   }
 
   return {
     limit,
     create(now) {
-      return { tatScaled: now * limit };
+      return { tatOffset: 0, updatedAt: now };
     },
-    advance(_state, _now) {},
-    tryConsume(state: GcraState, cost: number, now: number) {
-      const nowScaled = now * limit;
-      const allowAt = state.tatScaled - tauScaled;
-      if (nowScaled < allowAt) return false;
-      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
-      if (newTat - nowScaled > tauScaled) return false;
-      state.tatScaled = newTat;
+    // Preserve the absolute TAT when the clock steps backwards.
+    advance(state, now) {
+      if (now <= state.updatedAt) return;
+      state.tatOffset = offsetAt(state, now);
+      state.updatedAt = now;
+    },
+    tryConsume(state, cost, now) {
+      const next = offsetAt(state, now) + window * cost;
+      if (next > tauScaled) return false;
+      state.tatOffset = next;
+      state.updatedAt = now;
       return true;
     },
-    wouldAllow(state: GcraState, cost: number, now: number) {
-      const nowScaled = now * limit;
-      const allowAt = state.tatScaled - tauScaled;
-      if (nowScaled < allowAt) return false;
-      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
-      return newTat - nowScaled <= tauScaled;
+    wouldAllow(state, cost, now) {
+      return offsetAt(state, now) + window * cost <= tauScaled;
     },
     result(state, ok, cost, now) {
       return {
         ok,
-        remaining: remaining(state, now * limit),
-        resetAt: state.tatScaled / limit,
+        remaining: remaining(offsetAt(state, now)),
+        resetAt: Math.max(now, state.updatedAt + state.tatOffset / limit),
         retryAfter: ok ? 0 : this.computeRetryAfter(state, cost, now),
         limit,
       };
@@ -318,13 +330,8 @@ export function createGcraOps(
     // A monotonic clock never exceeds `cost` emission intervals; the clamp
     // only bites when the clock steps backwards.
     computeRetryAfter(state, cost, now) {
-      const nowScaled = now * limit;
-      const allowAt = state.tatScaled - tauScaled;
-      const newTat = Math.max(state.tatScaled, nowScaled) + window * cost;
-      const waitScaled = nowScaled < allowAt
-        ? allowAt - nowScaled
-        : Math.max(0, newTat - tauScaled - nowScaled);
-      return Math.min(window * cost, waitScaled) / limit;
+      const wait = offsetAt(state, now) + window * cost - tauScaled;
+      return Math.min(window * cost, Math.max(0, wait)) / limit;
     },
   };
 }

@@ -185,7 +185,7 @@ export function createTokenBucketAlgorithm(
  * Creates a keyed GCRA (Generic Cell Rate Algorithm) rate limit algorithm.
  *
  * @param limit Maximum permits per key per window. Must be a positive integer.
- * @param window Window (tau) in milliseconds. Must be a positive finite number.
+ * @param window Window (tau) in milliseconds. Must be a positive integer with `window * limit < 2 ** 53`.
  * @param options Additional keyed algorithm options.
  * @returns A keyed algorithm using GCRA semantics.
  */

@@ -40,7 +40,10 @@ export interface RateLimitResult {
 export interface AlgorithmOptions {
   /** Maximum permits per key per window/cycle. */
   limit: number;
-  /** Window duration in milliseconds. */
+  /**
+   * Window duration in milliseconds. GCRA requires a positive integer and
+   * `window * limit < 2 ** 53`.
+   */
   window: number;
   /**
    * Algorithm to use.
