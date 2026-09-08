@@ -26,9 +26,7 @@ const {
  * Unlike {@linkcode BinarySearchTree}, which degrades to linear time on
  * already-ordered input, a red-black tree rebalances itself on every insertion
  * and removal, so every lookup, insertion, and removal is logarithmic in the
- * worst case and not just on average. Rebalancing needs fewer rotations than a
- * strictly balanced tree such as an AVL tree, trading slightly slower lookups
- * for faster insertions and removals.
+ * worst case and not just on average.
  *
  * Values are unique under the comparator: inserting a value that compares
  * equal to one already in the tree leaves the tree unchanged.
@@ -38,24 +36,32 @@ const {
  * traversal methods inherited from {@linkcode BinarySearchTree} expose the
  * other orders.
  *
- * | Method              | Time complexity                           |
- * | ------------------- | ----------------------------------------- |
- * | find(value)         | O(log n)                                  |
- * | insert(value)       | O(log n)                                  |
- * | remove(value)       | O(log n)                                  |
- * | min()               | O(log n)                                  |
- * | max()               | O(log n)                                  |
- * | size                | O(1)                                      |
- * | isEmpty()           | O(1)                                      |
- * | clear()             | O(1)                                      |
- * | lnrValues()         | O(n)                                      |
- * | rnlValues()         | O(n)                                      |
- * | nlrValues()         | O(n)                                      |
- * | lrnValues()         | O(n)                                      |
- * | lvlValues()         | O(n)                                      |
- * | [Symbol.iterator]   | O(n)                                      |
- * | RedBlackTree()      | O(1)                                      |
- * | RedBlackTree.from() | O(n) copying a tree, O(n log n) otherwise |
+ * The following bounds are worst-case, where n is the number of values in the
+ * tree (or input collection for `from()`). Traversal bounds cover consuming the
+ * entire iterator; comparison and mapping functions are assumed to take O(1).
+ *
+ * | Method              | Time complexity             |
+ * | ------------------- | --------------------------- |
+ * | find(value)         | O(log n)                    |
+ * | insert(value)       | O(log n)                    |
+ * | remove(value)       | O(log n)                    |
+ * | min()               | O(log n)                    |
+ * | max()               | O(log n)                    |
+ * | size                | O(1)                        |
+ * | isEmpty()           | O(1)                        |
+ * | clear()             | O(1)                        |
+ * | lnrValues()         | O(n)                        |
+ * | rnlValues()         | O(n)                        |
+ * | nlrValues()         | O(n)                        |
+ * | lrnValues()         | O(n)                        |
+ * | lvlValues()         | O(n²)                       |
+ * | [Symbol.iterator]() | O(n)                        |
+ * | RedBlackTree()      | O(1)                        |
+ * | RedBlackTree.from() | O(n) or O(n log n)          |
+ *
+ * `lvlValues()` uses an array queue whose shifts can take linear time.
+ * `RedBlackTree.from()` takes O(n) when copying a {@linkcode RedBlackTree}
+ * without a `compare` or `map` option, and O(n log n) otherwise.
  *
  * @example Usage
  * ```ts
