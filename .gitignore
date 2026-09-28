@@ -20,6 +20,6 @@ _tmp/
 *.sublime-project
 *.sublime-workspace
 
-# tsconfig for bun
+# local TypeScript config
 /tsconfig.json
 .claude/
