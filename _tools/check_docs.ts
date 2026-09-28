@@ -270,9 +270,7 @@ function assertClassDocs(document: DocNodeWithJsDoc<DocNodeClass>) {
   for (const typeParam of document.classDef.typeParams) {
     assertHasTypeParamTags(document, typeParam.name);
   }
-  if (!document.jsDoc.tags?.some((tag) => tag.kind === "example")) {
-    assertHasExampleTag(document);
-  }
+  assertHasExampleTag(document);
 
   for (const property of document.classDef.properties) {
     if (property.jsDoc === undefined) continue; // this is caught by `deno doc --lint`

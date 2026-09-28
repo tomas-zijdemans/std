@@ -5,7 +5,7 @@
  * Check the test suite internal state
  *
  * @example Usage
- * ```ts
+ * ```ts no-assert
  * import { AssertionState } from "@std/internal";
  *
  * const assertionState = new AssertionState();

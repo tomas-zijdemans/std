@@ -159,6 +159,7 @@ function clamp(value: number, min: number, max: number) {
  * }
  *
  * await bar.stop();
+ * ```
  */
 export class ProgressBar {
   /**

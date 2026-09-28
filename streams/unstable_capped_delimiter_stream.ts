@@ -58,7 +58,7 @@ export interface CappedDelimiterOptions {
  * intermediate chunks instead of waiting for the entire message or risking
  * excessive memory usage.
  *
- * @example
+ * @example Usage
  * ```ts
  * import { assertEquals } from "@std/assert";
  * import {

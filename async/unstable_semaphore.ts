@@ -13,7 +13,7 @@ interface Node {
  * @experimental **UNSTABLE**: New API, yet to be vetted.
  *
  * @example Usage
- * ```ts
+ * ```ts no-assert
  * import { Semaphore } from "@std/async/unstable-semaphore";
  *
  * const sem = new Semaphore(2);
