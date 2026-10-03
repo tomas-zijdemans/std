@@ -29,18 +29,14 @@ export async function toArrayBuffer(
   const reader = readableStream.getReader();
   const chunks: Uint8Array[] = [];
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
+  while (true) {
+    const { done, value } = await reader.read();
 
-      if (done) {
-        break;
-      }
-
-      chunks.push(value);
+    if (done) {
+      break;
     }
-  } finally {
-    reader.releaseLock();
+
+    chunks.push(value);
   }
 
   return concat(chunks).buffer as ArrayBuffer;
