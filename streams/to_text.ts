@@ -35,17 +35,25 @@ export async function toText(
   const reader = stream.getReader();
   let result = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
 
-    if (done) {
-      break;
+      if (done) {
+        break;
+      }
+
+      result += typeof value === "string"
+        ? value
+        : textDecoder.decode(value, { stream: true });
     }
-
-    result += typeof value === "string"
-      ? value
-      : textDecoder.decode(value, { stream: true });
+    result += textDecoder.decode();
+    return result;
+  } catch (error) {
+    // Not awaited: a source whose cancel never settles must not hang the caller.
+    reader.cancel(error).catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
   }
-  result += textDecoder.decode();
-  return result;
 }
