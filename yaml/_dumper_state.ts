@@ -390,7 +390,9 @@ function getDuplicateObjects(root: unknown): unknown[] {
     }
     seenObjects.add(value);
     const children = Array.isArray(value) ? value : Object.values(value);
-    queue.push(...children);
+    for (const child of children) {
+      if (isObject(child)) queue.push(child);
+    }
   }
 
   return [...duplicateObjects];

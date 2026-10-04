@@ -814,6 +814,55 @@ Deno.test("stringify() handles duplicate array references", () => {
   );
 });
 
+Deno.test("stringify() handles wide arrays with default options", () => {
+  const length = 200_000;
+  const array = Array<number>(length).fill(1);
+  const expected = "- 1\n".repeat(length);
+  for (const stringifyFn of [stringify, unstableStringify]) {
+    assertEquals(stringifyFn(array), expected);
+  }
+});
+
+Deno.test("stringify() handles nested wide arrays with default options", () => {
+  const length = 200_000;
+  const array = Array<number>(length).fill(1);
+  const expected = `- - 1\n${"  - 1\n".repeat(length - 1)}`;
+  for (const stringifyFn of [stringify, unstableStringify]) {
+    assertEquals(stringifyFn([array]), expected);
+  }
+});
+
+Deno.test("stringify() handles wide mappings with default options", () => {
+  const entries = Array.from(
+    { length: 200_000 },
+    (_, i) => [`key${i}`, i] as const,
+  );
+  const object = Object.fromEntries(entries);
+  const expected = entries.map(([key, value]) => `${key}: ${value}\n`).join("");
+  for (const stringifyFn of [stringify, unstableStringify]) {
+    assertEquals(stringifyFn(object), expected);
+  }
+});
+
+Deno.test("stringify() preserves anchor order from custom array iterators", () => {
+  const a = { name: "a" };
+  const b = { name: "b" };
+  const array = [a, b, a, b];
+  Object.defineProperty(array, Symbol.iterator, {
+    value: function* () {
+      yield b;
+      yield a;
+      yield b;
+      yield a;
+    },
+  });
+  const expected =
+    "- &ref_0\n  name: b\n- &ref_1\n  name: a\n- *ref_0\n- *ref_1\n";
+  for (const stringifyFn of [stringify, unstableStringify]) {
+    assertEquals(stringifyFn(array), expected);
+  }
+});
+
 Deno.test({
   name:
     "stringify() handles undefined array entry with skipInvalid and flowLevel option",
