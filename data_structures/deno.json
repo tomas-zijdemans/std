@@ -13,6 +13,7 @@
     "./unstable-2d-array": "./unstable_2d_array.ts",
     "./unstable-rolling-counter": "./unstable_rolling_counter.ts",
     "./unstable-indexed-heap": "./unstable_indexed_heap.ts",
+    "./unstable-intrusive-list": "./unstable_intrusive_list.ts",
     "./unstable-multimap": "./unstable_multimap.ts"
   }
 }
