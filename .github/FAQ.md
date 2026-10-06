@@ -18,9 +18,9 @@ The Standard Library aims to complement the
 The Standard Library supports the following runtimes, with compatibility varying
 by package and API:
 
-1. [Deno](https://deno.com/) (latest stable version and canary)
+1. [Deno](https://deno.com/)
 1. [Deno Deploy](https://deno.com/deploy)
-1. Web browsers (i.e. [Google Chrome](https://www.google.com.au/chrome/),
+1. Web browsers (e.g. [Google Chrome](https://www.google.com.au/chrome/),
    [Mozilla Firefox](https://www.mozilla.org/firefox/),
    [Apple Safari](https://www.apple.com/safari/), etc.)
 1. [Node.js](https://nodejs.org/)
@@ -29,8 +29,8 @@ by package and API:
 
 ## Why is the Standard Library versioned differently to the Deno runtime?
 
-The Standard Library supports multiple runtimes. Versioning it independently
-from Deno allows both projects to evolve independently.
+The Standard Library supports multiple runtimes. Versioning it separately from
+Deno allows both projects to evolve independently.
 
 ## Which versions of Deno is the Standard Library tested with?
 
@@ -57,6 +57,9 @@ For example, in Deno, you can constrain updates to major version 1:
 import { bar } from "jsr:@std/foo@^1";
 ```
 
+This range excludes breaking changes to stable APIs. APIs imported from
+`unstable-*` entrypoints can still change in any release.
+
 For more information, see JSR's
 [SemVer resolution](https://jsr.io/docs/using-packages#semver-resolution)
 documentation.
@@ -74,12 +77,20 @@ An API is deprecated due to one of the following reasons:
 ## When is a deprecated API removed?
 
 In almost all cases, a deprecated API is removed in the next major version after
-deprecation. This is to minimize breaking changes for users.
+deprecation, or in the next minor version for packages below 1.0.0. This is to
+minimize breaking changes for users.
 
 ## Can I still use a deprecated API?
 
 Yes. You can use a package version that contains the deprecated API in question
 by pinning the package version.
+
+For example, if `bar()` was removed in `@std/foo@0.225.0`, pin an earlier
+version:
+
+```ts, ignore
+import { bar } from "jsr:@std/foo@0.224.0/bar";
+```
 
 This is possible thanks to JSR being immutable. For more information, see JSR's
 [Immutability](https://jsr.io/docs/immutability) documentation.
