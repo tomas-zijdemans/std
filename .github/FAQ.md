@@ -77,8 +77,8 @@ An API is deprecated due to one of the following reasons:
 ## When is a deprecated API removed?
 
 In almost all cases, a deprecated API is removed in the next major version after
-deprecation, or in the next minor version for packages below 1.0.0. This is to
-minimize breaking changes for users.
+deprecation. Packages below 1.0.0 can remove it in a minor version instead. The
+`@deprecated` notice specifies the removal version.
 
 ## Can I still use a deprecated API?
 
