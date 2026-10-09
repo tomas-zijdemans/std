@@ -59,8 +59,8 @@ const constants: GlobConstants = {
  * - Absolute globs will only match absolute paths, etc.
  * - Empty globs will match nothing.
  * - Brace and extended groups can contain separators, so `?(foo|bar/baz)`
- *   matches `bar/baz`. Character classes can't: in `[a/b]`, the separator ends
- *   the segment and leaves the class unclosed.
+ *   matches `bar/baz`. Outside such groups, a separator in a character class
+ *   ends the segment and leaves the class unclosed, so `[a/b]` is taken literally.
  * - If a path segment ends with unclosed groups or a dangling escape prefix, a
  *   parse error has occurred. Every character for that segment is taken
  *   literally in this event.
