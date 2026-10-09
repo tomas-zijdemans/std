@@ -135,7 +135,12 @@ Deno.test({
     for (const c of "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~") {
       assert(match("[[:punct:]]", c, { extended: false, globstar: false }), c);
     }
-    assert(!match("[[:punct:]]", "‘", { extended: false, globstar: false }));
+    assert(
+      !posixMatch("[[:punct:]]", "‘", { extended: false, globstar: false }),
+    );
+    assert(
+      !windowsMatch("[[:punct:]]", "‘", { extended: false, globstar: false }),
+    );
     for (const c of "\t\n\v\f\r ") {
       assert(match("[[:space:]]", c, { extended: false, globstar: false }), c);
     }
