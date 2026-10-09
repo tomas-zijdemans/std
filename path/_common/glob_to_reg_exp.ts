@@ -142,7 +142,7 @@ export function _globToRegExp(
             else if (value === "lower") segment += "a-z";
             else if (value === "print") segment += "\x20-\x7E";
             else if (value === "punct") {
-              segment += "!\"#$%&'()*+,\\-./:;<=>?@[\\\\\\]^_‘{|}~";
+              segment += "!\"#$%&'()*+,\\-./:;<=>?@[\\\\\\]^_`{|}~";
             } else if (value === "space") segment += "\\s\v";
             else if (value === "upper") segment += "A-Z";
             else if (value === "word") segment += "\\w";

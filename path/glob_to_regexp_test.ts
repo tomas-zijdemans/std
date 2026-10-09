@@ -132,9 +132,10 @@ Deno.test({
     for (const c of "\x20\x7E") {
       assert(match("[[:print:]]", c, { extended: false, globstar: false }), c);
     }
-    for (const c of "!\"#$%&'()*+,-./:;<=>?@[\\]^_‘{|}~") {
+    for (const c of "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~") {
       assert(match("[[:punct:]]", c, { extended: false, globstar: false }), c);
     }
+    assert(!match("[[:punct:]]", "‘", { extended: false, globstar: false }));
     for (const c of "\t\n\v\f\r ") {
       assert(match("[[:space:]]", c, { extended: false, globstar: false }), c);
     }
