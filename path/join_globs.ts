@@ -13,6 +13,8 @@ export type { GlobOptions };
  *
  * Behaves like {@linkcode https://jsr.io/@std/path/doc/~/join | join()}, but
  * doesn't collapse `**\/..` when `globstar` is true.
+ * `globstar` defaults to `false`, unlike in
+ * {@linkcode https://jsr.io/@std/path/doc/~/globToRegExp | globToRegExp()}.
  *
  * @example Usage
  * ```ts

@@ -16,6 +16,8 @@ export type { GlobOptions };
  * Behaves like
  * {@linkcode https://jsr.io/@std/path/doc/~/normalize | normalize()}, but
  * doesn't collapse "**\/.." when `globstar` is true.
+ * `globstar` defaults to `false`, unlike in
+ * {@linkcode https://jsr.io/@std/path/doc/~/globToRegExp | globToRegExp()}.
  *
  * @example Usage
  * ```ts
@@ -24,9 +26,11 @@ export type { GlobOptions };
  *
  * if (Deno.build.os === "windows") {
  *   assertEquals(normalizeGlob("foo\\bar\\..\\baz"), "foo\\baz");
+ *   assertEquals(normalizeGlob("foo\\**\\..\\baz"), "foo\\baz");
  *   assertEquals(normalizeGlob("foo\\**\\..\\bar\\..\\baz", { globstar: true }), "foo\\**\\..\\baz");
  * } else {
  *   assertEquals(normalizeGlob("foo/bar/../baz"), "foo/baz");
+ *   assertEquals(normalizeGlob("foo/**\/../baz"), "foo/baz");
  *   assertEquals(normalizeGlob("foo/**\/../bar/../baz", { globstar: true }), "foo/**\/../baz");
  * }
  * ```

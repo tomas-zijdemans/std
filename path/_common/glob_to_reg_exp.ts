@@ -4,6 +4,8 @@
 /**
  * Options for {@linkcode globToRegExp}, {@linkcode joinGlobs},
  * {@linkcode normalizeGlob} and {@linkcode expandGlob}.
+ *
+ * {@linkcode joinGlobs} and {@linkcode normalizeGlob} only read `globstar`.
  */
 export interface GlobOptions {
   /** Extended glob syntax.
@@ -16,11 +18,14 @@ export interface GlobOptions {
    * See https://www.linuxjournal.com/content/globstar-new-bash-globbing-option.
    * If false, `**` is treated like `*`.
    *
+   * {@linkcode joinGlobs} and {@linkcode normalizeGlob} default this to
+   * `false`, so they collapse `**\/..` unless it is enabled.
+   *
    * @default {true}
    */
   globstar?: boolean;
   /**
-   * Whether globstar should be case-insensitive.
+   * Whether the whole pattern matches case-insensitively.
    *
    * @default {false}
    */
@@ -64,7 +69,6 @@ export function _globToRegExp(
   {
     extended = true,
     globstar: globstarOption = true,
-    // os = osType,
     caseInsensitive = false,
   }: GlobOptions = {},
 ): RegExp {

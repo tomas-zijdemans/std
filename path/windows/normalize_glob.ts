@@ -9,6 +9,7 @@ export type { GlobOptions };
 
 /**
  * Like normalize(), but doesn't collapse "**\/.." when `globstar` is true.
+ * `globstar` defaults to `false`.
  *
  * @example Usage
  * ```ts

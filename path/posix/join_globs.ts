@@ -10,6 +10,7 @@ export type { GlobOptions };
 
 /**
  * Like join(), but doesn't collapse "**\/.." when `globstar` is true.
+ * `globstar` defaults to `false`.
  *
  * @example Usage
  * ```ts

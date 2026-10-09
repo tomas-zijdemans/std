@@ -28,13 +28,13 @@ export type { GlobOptions };
  *     - `[[:digit:]abc]` - Matches any digit, `a`, `b` or `c`.
  *     - See https://facelessuser.github.io/wcmatch/glob/#posix-character-classes
  *       for a complete list of supported character classes.
- * - `\` - Escapes the next character for an `os` other than `"windows"`.
- * - \` - Escapes the next character for `os` set to `"windows"`.
+ * - `\` - Escapes the next character on POSIX.
+ * - `` ` `` - Escapes the next character on Windows.
  * - `/` - Path separator.
- * - `\` - Additional path separator only for `os` set to `"windows"`.
+ * - `\` - Additional path separator on Windows.
  *
  * Extended syntax:
- * - Requires `{ extended: true }`.
+ * - Enabled by default. Disable with `{ extended: false }`.
  * - `?(foo|bar)` - Matches 0 or 1 instance of `{foo,bar}`.
  * - `@(foo|bar)` - Matches 1 instance of `{foo,bar}`. They behave the same.
  * - `*(foo|bar)` - Matches _n_ instances of `{foo,bar}`.
@@ -43,20 +43,22 @@ export type { GlobOptions };
  * - See https://www.linuxjournal.com/content/bash-extended-globbing.
  *
  * Globstar syntax:
- * - Requires `{ globstar: true }`.
+ * - Enabled by default. Disable with `{ globstar: false }`, which makes `**`
+ *   behave like `*`.
  * - `**` - Matches any number of any path segments.
  *     - Must comprise its entire path segment in the provided glob.
  * - See https://www.linuxjournal.com/content/globstar-new-bash-globbing-option.
  *
  * Note the following properties:
  * - The generated `RegExp` is anchored at both start and end.
+ * - With `{ caseInsensitive: true }`, the whole pattern ignores case.
  * - Repeating and trailing separators are tolerated. Trailing separators in the
  *   provided glob have no meaning and are discarded.
  * - Absolute globs will only match absolute paths, etc.
  * - Empty globs will match nothing.
- * - Any special glob syntax must be contained to one path segment. For example,
- *   `?(foo|bar/baz)` is invalid. The separator will take precedence and the
- *   first segment ends with an unclosed group.
+ * - Brace and extended groups can contain separators, so `?(foo|bar/baz)`
+ *   matches `bar/baz`. Character classes can't: in `[a/b]`, the separator ends
+ *   the segment and leaves the class unclosed.
  * - If a path segment ends with unclosed groups or a dangling escape prefix, a
  *   parse error has occurred. Every character for that segment is taken
  *   literally in this event.
@@ -78,6 +80,17 @@ export type { GlobOptions };
  * } else {
  *   assertEquals(globToRegExp("*.js"), /^[^/]*\.js\/*$/);
  * }
+ * ```
+ *
+ * @example Groups spanning path segments
+ * ```ts
+ * import { globToRegExp } from "@std/path/glob-to-regexp";
+ * import { assert } from "@std/assert";
+ *
+ * const regExp = globToRegExp("src/{lib,test/unit}/*.ts");
+ * assert(regExp.test("src/lib/mod.ts"));
+ * assert(regExp.test("src/test/unit/mod_test.ts"));
+ * assert(!regExp.test("src/test/mod_test.ts"));
  * ```
  *
  * @param glob Glob string to convert.
